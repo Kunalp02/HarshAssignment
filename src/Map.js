@@ -1,26 +1,33 @@
 import React, { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 
-// mapboxgl.accessToken = ';
+mapboxgl.accessToken = 'pk.eyJ1Ijoia3VuYWxwYXRpbDIwMDIiLCJhIjoiY2xqNGQwNDk5MDFpMTNmdGV3Z2J1ajJ1dyJ9.KQBw0eZbPvHePnhn-MmQtA';
 
-
-function Map() {
+const Map = ({ center }) => {
   const mapContainerRef = useRef(null);
+  const mapRef = useRef(null);
 
   useEffect(() => {
-    const map = new mapboxgl.Map({
+    mapRef.current = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: 'mapbox://styles/mapbox/streets-v11',
-      center: [-74.006, 40.7128], 
-      zoom: 12
+      center,
+      zoom: 9,
     });
 
-    map.addControl(new mapboxgl.NavigationControl());
+    return () => mapRef.current.remove();
+  }, [center]);
 
-    return () => map.remove();
-  }, []);
+  useEffect(() => {
+    if (mapRef.current && center) {
+      mapRef.current.flyTo({
+        center,
+        zoom: 12,
+      });
+    }
+  }, [center]);
 
-  return <div ref={mapContainerRef}  className="h-[100%] flex-1 bg-gray-300"/>;
-}
+  return <div ref={mapContainerRef} className="w-3/4 h-full" />;
+};
 
 export default Map;
