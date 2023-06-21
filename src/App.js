@@ -1,56 +1,67 @@
-import React, { useState, useEffect } from 'react';
-import Map from './Map';
+import React, { useRef, useEffect, useState } from 'react';
+import Sidebar from './components/Sidebar';
+import mapboxgl from 'mapbox-gl';
 
-function App() {
-  const [searchText, setSearchText] = useState('');
+mapboxgl.accessToken = 'pk.eyJ1Ijoia3VuYWxwYXRpbDIwMDIiLCJhIjoiY2xpeGU5NXJ2MDc2eTNqcGh3ZnZ4ZGc4eiJ9.sVDIOzQGbk9-m8PcB6JiSw';
+
+export default function App() {
+  const mapContainer = useRef(null);
+  const map = useRef(null);
+  const [lng, setLng] = useState(-70.9);
+  const [lat, setLat] = useState(42.35);
+  const [zoom, setZoom] = useState(9);
+  const [searchLocation, setSearchLocation] = useState('');
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchText.trim() !== '') {
-        fetchSearchResults();
-      }
-    }, 500);
+    if (!map.current) {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [lng, lat],
+        zoom: zoom
+      });
+    } else {
+      map.current.flyTo({
+        center: [lng, lat],
+        zoom: zoom
+      });
+    }
+  }, [lng, lat, zoom]);
 
-    return () => clearTimeout(timer);
-  }, [searchText]);
-
-  const fetchSearchResults = async () => {
-    try {
-      const response = await fetch(
+  const handleSearch = (value) => {
+    setSearchLocation(value);
+    if (value.trim() !== '') {
+      fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-          searchText
-        )}.json?access_token=pk.eyJ1Ijoia3VuYWxwYXRpbDIwMDIiLCJhIjoiY2xqNGQwNDk5MDFpMTNmdGV3Z2J1ajJ1dyJ9.KQBw0eZbPvHePnhn-MmQtA`
-      );
-      const data = await response.json();
-      if (data.features.length > 0) {
-        const center = data.features[0].geometry.coordinates;
-        setMapCenter(center);
-      }
-    } catch (error) {
-      console.error('Error searching for locations:', error);
+          value
+        )}.json?access_token=${mapboxgl.accessToken}`
+      )
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.features.length > 0) {
+            const [newLng, newLat] = data.features[0].center;
+            setLng(newLng);
+            setLat(newLat);
+            setZoom(13);
+          }
+        })
+        .catch((error) => {
+          console.log('Error:', error);
+        });
     }
   };
 
-  const [mapCenter, setMapCenter] = useState([-74.5, 40]);
-
   return (
-    <div className="h-screen flex">
-      <Map center={mapCenter} />
-
-      {/* Sidebar */}
-      <div className="w-1/4 bg-white shadow-lg">
-        <div className="flex justify-center items-center h-16 border-b border-gray-200">
-          <input
-            type="text"
-            placeholder="Search"
-            className="bg-gray-200 px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-          />
-        </div>
+    <div className="flex flex-row">
+      <div className="max-w-maxContent w-11/12 h-100">
+        <div ref={mapContainer} className="h-[100vh] w-[80vw]" />
       </div>
+
+      <Sidebar
+        onSearch={handleSearch}
+        searchLocation={searchLocation}
+        className="border"
+      />
     </div>
   );
 }
-
-export default App;
